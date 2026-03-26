@@ -1,0 +1,47 @@
+version: "3.9"
+
+services:
+
+  # ── Flask App Container ─────────────────────────────────────────
+  flask_app:
+    build: .                          # Build image from Dockerfile in current folder
+    container_name: citycare_flask
+    restart: always                   # Auto restart if it crashes
+    environment:
+      - FLASK_ENV=production
+      - FLASK_APP=app.py
+    volumes:
+      - db_data:/app/data             # Persist SQLite database across restarts
+    networks:
+      - citycare_network
+    expose:
+      - "5000"                        # Only accessible inside Docker network (not public)
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:5000')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # ── Nginx Reverse Proxy Container ──────────────────────────────
+  nginx:
+    image: nginx:alpine               # Lightweight official Nginx image
+    container_name: citycare_nginx
+    restart: always
+    ports:
+      - "80:80"                       # Map host port 80 → container port 80 (public access)
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro   # Mount our custom nginx config (read-only)
+    depends_on:
+      - flask_app                     # Wait for Flask to start before Nginx
+    networks:
+      - citycare_network
+
+# ── Named Volume for Database ───────────────────────────────────
+volumes:
+  db_data:
+    driver: local
+
+# ── Internal Network ────────────────────────────────────────────
+networks:
+  citycare_network:
+    driver: bridge
