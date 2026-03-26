@@ -50,12 +50,12 @@ jobs:
             docker pull ${{ secrets.DOCKER_USERNAME }}/citycare-hospital:latest
 
             # Stop and remove old containers
-            docker-compose -f /home/ubuntu/citycare/docker-compose.yml down
+            docker stop citycare-container || true
 
             # Start fresh containers with new image
-            docker-compose -f /home/ubuntu/citycare/docker-compose.yml up -d
+            docker rm citycare-container || true
 
             # Clean up old unused images
-            docker image prune -f
+            docker run -d \ -p 80:5000 \ --name citycare-container \ ${{ secrets.DOCKER_USERNAME }}/citycare-hospital:late
 
             echo "✅ Deployment complete!"
